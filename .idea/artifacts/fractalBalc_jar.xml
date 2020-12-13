@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" build-on-make="true" name="fractalBalc:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/fractalBalc_jar</output-path>
+    <root id="archive" name="fractalBalc.jar">
+      <element id="module-output" name="fractalBalc" />
+    </root>
+  </artifact>
+</component>
