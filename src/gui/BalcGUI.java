@@ -11,18 +11,18 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class BalcGUI implements GuiUpdate {
     private JPanel mainPanel;
     private JTextPane logTextPane;
-    private JTextField listenPortTextField;
+    private JTextField listenAddrTextField;
     private JButton startButton;
     private JButton stopButton;
 
     private final AtomicBoolean isServerRunning;
-    private final Balancer balancer;
+    private Balancer balancer;
 
     public BalcGUI(){
         isServerRunning = new AtomicBoolean(false);
-        balancer = new Balancer(this);
 
         startButton.addActionListener(e -> {
+            balancer = new Balancer(this);
             Thread td = new Thread(balancer);
             td.start();
         });
@@ -33,6 +33,7 @@ public class BalcGUI implements GuiUpdate {
             } catch (IOException ioException) {
                 ioException.printStackTrace();
             }
+            logTextPane.setText("");
         });
     }
 
@@ -40,7 +41,7 @@ public class BalcGUI implements GuiUpdate {
     public void onStart() {
         setServerRunning(true);
         startButton.setEnabled(false);
-        listenPortTextField.setEnabled(false);
+        listenAddrTextField.setEnabled(false);
         stopButton.setEnabled(true);
     }
 
@@ -49,8 +50,8 @@ public class BalcGUI implements GuiUpdate {
         setServerRunning(false);
         stopButton.setEnabled(false);
         startButton.setEnabled(true);
-        listenPortTextField.setEnabled(true);
-        onDisplay(Color.YELLOW, "Server stopped");
+        listenAddrTextField.setEnabled(true);
+        onDisplay(Color.YELLOW, "Balancer stopped");
     }
 
     @Override
@@ -76,6 +77,6 @@ public class BalcGUI implements GuiUpdate {
     }
 
     public int getListenPort() {
-        return Integer.parseInt(listenPortTextField.getText());
+        return Integer.parseInt(listenAddrTextField.getText());
     }
 }

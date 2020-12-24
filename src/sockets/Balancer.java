@@ -1,22 +1,28 @@
 package sockets;
 
 import gui.BalcGUI;
+import handlers.ClientHandler;
+import handlers.ServerHandler;
 
 import java.awt.*;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
-import java.io.ObjectInputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.util.ArrayList;
 
 public class Balancer implements Runnable {
 
     private final BalcGUI balcGUI;
     private ServerSocket serverSocket;
+    private final ArrayList<ServerHandler> servers;
 
     public Balancer(BalcGUI balcGUI) {
         this.balcGUI = balcGUI;
+        servers = new ArrayList<>();
     }
 
     @Override
@@ -25,23 +31,34 @@ public class Balancer implements Runnable {
 
         try {
             serverSocket = new ServerSocket(balcGUI.getListenPort());
-
-            balcGUI.onDisplay(Color.GREEN, "Server listening on port " + serverSocket.getLocalPort());
+            balcGUI.onDisplay(Color.GREEN, "Balancer listening on port " + serverSocket.getLocalPort());
 
             while (balcGUI.isServerRunning()) {
                 try {
                     Socket socket = serverSocket.accept();
+                    DataInputStream dis = new DataInputStream(socket.getInputStream());
+                    DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
 
                     balcGUI.onDisplay(Color.GREEN, "connection form " + socket.getInetAddress() + ":" + socket.getPort());
 
-                    ObjectInputStream isr = new ObjectInputStream(socket.getInputStream());
-
-                    switch (isr.readChar()) {
+                    switch (dis.readChar()) {
                         case 'c':
-                            balcGUI.onDisplay(Color.GREEN, "Client socket connected" + socket);
+                            balcGUI.onDisplay(Color.GREEN, "Client connected");
+
+                            if(servers.size() < 1) {
+                                balcGUI.onDisplay(Color.RED, "No servers connected, closing socket");
+                                socket.close();
+                                break;
+                            } else {
+                                ClientHandler client = new ClientHandler(dis, dos, servers, balcGUI);
+                                new Thread(client).start();
+                            }
                             break;
                         case 's':
-                            balcGUI.onDisplay(Color.GREEN, "Server socket connected" + socket);
+                            balcGUI.onDisplay(Color.GREEN, "Server connected");
+
+                            ServerHandler sh = new ServerHandler(dis, dos, balcGUI);
+                            servers.add(sh);
                             break;
                         default:
                             socket.close();
