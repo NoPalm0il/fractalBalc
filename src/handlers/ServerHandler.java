@@ -12,7 +12,7 @@ public class ServerHandler implements Runnable{
     private String fractalParams;
     private final BalcGUI balcGUI;
     private byte[] fractalBuffer;
-    //private final Socket socket;
+    private int start, end;
 
     public ServerHandler(DataInputStream serverInputStream, DataOutputStream serverOutputStream, BalcGUI balcGUI) {
         //this.socket = socket;
@@ -26,6 +26,7 @@ public class ServerHandler implements Runnable{
     public void run() {
         int bytesRead, totalBytes = 0;
         try {
+            fractalParams += " " + start + " " + end;
             serverOutputStream.writeUTF(fractalParams);
             serverOutputStream.flush();
             // read bytes
@@ -46,5 +47,10 @@ public class ServerHandler implements Runnable{
 
     public byte[] getFractalBuffer() {
         return fractalBuffer;
+    }
+
+    public void setWork(int start, int end) {
+        this.start = start;
+        this.end = end;
     }
 }

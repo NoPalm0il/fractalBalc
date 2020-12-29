@@ -26,15 +26,15 @@ public class ClientHandler implements Runnable {
     public void run() {
         try {
             String rawString = clientInputStream.readUTF();
-/*
+
             String[] fractalParams = rawString.split(" ");
             int dimX = Integer.parseInt(fractalParams[4]);
             int work = dimX / servers.size();
- */
             Thread[] pool = new Thread[servers.size()];
             int i = 0;
             for (ServerHandler server : servers) {
                 server.setFractalParams(rawString);
+                server.setWork(i * work, (i + 1) * work);
                 pool[i] = new Thread(server);
                 pool[i].start();
                 i++;
