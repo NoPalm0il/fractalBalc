@@ -1,4 +1,4 @@
-package sockets;
+package balancer;
 
 import gui.BalcGUI;
 import handlers.ClientHandler;
@@ -12,17 +12,17 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
-import java.util.ArrayList;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class Balancer implements Runnable {
 
     private final BalcGUI balcGUI;
     private ServerSocket serverSocket;
-    private final ArrayList<ServerHandler> servers;
+    private final CopyOnWriteArrayList<ServerHandler> servers;
 
     public Balancer(BalcGUI balcGUI) {
         this.balcGUI = balcGUI;
-        servers = new ArrayList<>();
+        servers = new CopyOnWriteArrayList<>();
     }
 
     @Override
@@ -57,8 +57,14 @@ public class Balancer implements Runnable {
                         case 's':
                             balcGUI.onDisplay(Color.GREEN, "Server connected");
 
-                            ServerHandler sh = new ServerHandler(dis, dos, balcGUI);
-                            servers.add(sh);
+                            if(servers.size() == 0)
+                                servers.add(new ServerHandler(socket, dis, dos, balcGUI));
+
+                            for (ServerHandler server : servers) {
+                                if(!socket.getInetAddress().equals(server.getSocket().getInetAddress()) &&
+                                        socket.getPort() != server.getSocket().getPort())
+                                    servers.add(new ServerHandler(socket, dis, dos, balcGUI));
+                            }
                             break;
                         default:
                             socket.close();

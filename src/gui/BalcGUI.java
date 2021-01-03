@@ -1,6 +1,6 @@
 package gui;
 
-import sockets.Balancer;
+import balancer.Balancer;
 import utils.GuiUtils;
 
 import javax.swing.*;
