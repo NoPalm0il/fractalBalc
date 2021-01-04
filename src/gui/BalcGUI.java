@@ -23,8 +23,7 @@ public class BalcGUI implements GuiUpdate {
 
         startButton.addActionListener(e -> {
             balancer = new Balancer(this);
-            Thread td = new Thread(balancer);
-            td.start();
+            new Thread(balancer).start();
         });
         stopButton.addActionListener(e -> {
             setServerRunning(false);
