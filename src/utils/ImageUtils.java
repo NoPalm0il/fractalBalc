@@ -32,7 +32,7 @@ public class ImageUtils {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         ImageIO.write(image, "jpg", baos);
         baos.flush();
-        return  baos.toByteArray();
+        return baos.toByteArray();
     }
 
     public static BufferedImage byteArrayToImage(byte[] data) throws IOException {
@@ -40,14 +40,13 @@ public class ImageUtils {
     }
 
     /**
-     *
-     * @param x - starting x coord
-     * @param y - starting y coord
+     * @param x      - starting x coord
+     * @param y      - starting y coord
      * @param buffer - color buffer to paint the image
      */
     public static void paintBufferedImage(int x, int y, int[][] buffer, BufferedImage image) {
-        for (int yy = y; yy < image.getHeight(); yy++) {
-            for (int xx = x; xx < image.getWidth(); xx++) {
+        for (int yy = y; yy < buffer.length; yy++) {
+            for (int xx = x; xx < buffer[0].length; xx++) {
                 image.setRGB(xx, yy, buffer[yy - y][xx - x]);
             }
         }

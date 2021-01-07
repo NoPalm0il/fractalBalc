@@ -27,13 +27,15 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- *
  * @author Zulu
  */
 public class GuiUtils {
 
+    static SimpleDateFormat sdfDate = new SimpleDateFormat("HH:mm:ss");
+
     /**
      * adiciona uma mensagem no      *
+     *
      * @param txt area de texto para apresentacao da mensagem
      * @param msg mensagem
      */
@@ -59,11 +61,11 @@ public class GuiUtils {
      * adiciona uma mensagem no formato "HH:mm:ss <Titulo> mensagem" no final da
      * caixa de texto com o titulo a Azul
      *
-     * @param txt area de texto para apresentacao da mensagem
+     * @param txt   area de texto para apresentacao da mensagem
      * @param title titulo da mensagem
-     * @param ex exception
+     * @param ex    exception
      */
-    public static void addException(final JTextPane txt,String title, final Exception ex) {
+    public static void addException(final JTextPane txt, String title, final Exception ex) {
         SwingUtilities.invokeLater(() -> {
             try {
                 StyleContext sc = new StyleContext();
@@ -74,7 +76,7 @@ public class GuiUtils {
                 StyleConstants.setForeground(style, Color.DARK_GRAY);
                 doc.insertString(doc.getLength(), "\n" + strDate + " ", style);
                 StyleConstants.setForeground(style, Color.PINK);
-                doc.insertString(doc.getLength(), title+ " ", style);
+                doc.insertString(doc.getLength(), title + " ", style);
                 StyleConstants.setForeground(style, Color.RED);
                 doc.insertString(doc.getLength(), ex.getLocalizedMessage(), style);
             } catch (BadLocationException ex1) {
@@ -82,15 +84,14 @@ public class GuiUtils {
             }
         });
     }
-    static SimpleDateFormat sdfDate = new SimpleDateFormat("HH:mm:ss");
 
     /**
      * adiciona uma imagem no formato "HH:mm:ss <Titulo> imagem" no final da
      * caixa de texto com o titulo a Azul
      *
-     * @param txt area de texto para apresentacao da mensagem
+     * @param txt   area de texto para apresentacao da mensagem
      * @param title titulo da mensagem
-     * @param img imagem para ser apresentada
+     * @param img   imagem para ser apresentada
      */
     public static void addImage(final JTextPane txt, final String title, final ImageIcon img) {
         SwingUtilities.invokeLater(() -> {

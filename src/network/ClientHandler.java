@@ -1,6 +1,6 @@
 package network;
 
-import gui.BalcGUI;
+import gui.GuiUpdate;
 import network.shared.ServerRMI;
 import utils.ImageUtils;
 
@@ -10,17 +10,20 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.rmi.RemoteException;
-import java.util.concurrent.*;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class ClientHandler implements Runnable {
 
     private final DataInputStream clientInputStream;
     private final DataOutputStream clientOutputStream;
     private final CopyOnWriteArrayList<ServerRMI> servers;
-    private final BalcGUI balcGUI;
+    private final GuiUpdate balcGUI;
     private BufferedImage fractalImg;
 
-    public ClientHandler(DataInputStream clientInputStream, DataOutputStream clientOutputStream, CopyOnWriteArrayList<ServerRMI> servers, BalcGUI balcGUI, BufferedImage fractalImage) {
+    public ClientHandler(DataInputStream clientInputStream, DataOutputStream clientOutputStream, CopyOnWriteArrayList<ServerRMI> servers, GuiUpdate balcGUI, BufferedImage fractalImage) {
         this.clientInputStream = clientInputStream;
         this.clientOutputStream = clientOutputStream;
         this.servers = servers;
@@ -37,6 +40,8 @@ public class ClientHandler implements Runnable {
             int dimX = Integer.parseInt(fractalParams[4]);
             int dimY = Integer.parseInt(fractalParams[5]);
             int work = dimX / servers.size();
+
+            fractalImg = new BufferedImage(dimX, dimY, BufferedImage.TYPE_INT_RGB);
 
             // TODO: this is not correct, imagine 50 servers connected... maybe correct?
             ExecutorService exe = Executors.newFixedThreadPool(servers.size());

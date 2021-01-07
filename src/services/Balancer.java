@@ -1,10 +1,10 @@
-package balancer;
+package services;
 
-import gui.BalcGUI;
-import network.shared.BalancerRMI;
+import gui.GuiUpdate;
 import network.ClientHandler;
+import network.ServerHandlerRMI;
+import network.shared.BalancerRMI;
 import network.shared.ServerRMI;
-import utils.ImageUtils;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -12,42 +12,49 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
-import java.rmi.AlreadyBoundException;
-import java.rmi.RemoteException;
+import java.rmi.Naming;
 import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-public class Balancer implements Runnable, BalancerRMI {
+public class Balancer implements Runnable {
 
-    private final BalcGUI balcGUI;
-    private ServerSocket serverSocket;
+    public static final int BALANCER_PORT = 10011;
+    private final GuiUpdate balcGUI;
     private final CopyOnWriteArrayList<ServerRMI> servers;
+    private final int socketPort;
+    private ServerSocket serverSocket;
     private BufferedImage fractalImage;
+    private final AtomicBoolean isServerRunning;
+    private BalancerRMI stub;
+    private ServerHandlerRMI serverHandlerRMI;
 
-    public Balancer(BalcGUI balcGUI) {
+    public Balancer(GuiUpdate balcGUI, int socketPort, AtomicBoolean isRunning) {
         this.balcGUI = balcGUI;
+        this.socketPort = socketPort;
+        this.isServerRunning = isRunning;
         servers = new CopyOnWriteArrayList<>();
     }
 
     @Override
     public void run() {
-        balcGUI.onStart();
-
         try {
-            serverSocket = new ServerSocket(balcGUI.getListenPort());
+            serverSocket = new ServerSocket(socketPort);
             balcGUI.onDisplay(Color.GREEN, "Balancer socket listening on port " + serverSocket.getLocalPort());
 
-            BalancerRMI stub = (BalancerRMI) UnicastRemoteObject.exportObject(this, 13337);
-            Registry registry = LocateRegistry.createRegistry(13337);
-            registry.bind("BalancerRMI", stub);
-            balcGUI.onDisplay(Color.GREEN, "BalancerRMI listening on port 13337");
+            serverHandlerRMI = new ServerHandlerRMI(balcGUI, fractalImage, servers);
+            stub = (BalancerRMI) UnicastRemoteObject.exportObject(serverHandlerRMI, BALANCER_PORT);
+            LocateRegistry.createRegistry(BALANCER_PORT);
+            String address = String.format("//%s:%d/%s", InetAddress.getLocalHost().getHostAddress(), BALANCER_PORT, "bal");
+            Naming.rebind(address, stub);
 
-            while (balcGUI.isServerRunning()) {
+            balcGUI.onDisplay(Color.GREEN, "BalancerRMI on: " + address);
+            while (isServerRunning.get()) {
                 try {
                     Socket socket = serverSocket.accept();
                     DataInputStream dis = new DataInputStream(socket.getInputStream());
@@ -77,7 +84,7 @@ public class Balancer implements Runnable, BalancerRMI {
                     balcGUI.onException(io.getMessage(), io);
                 }
             }
-        } catch (IOException | AlreadyBoundException e) {
+        } catch (IOException e) {
             balcGUI.onException(e.getMessage(), e);
         }
 
@@ -86,15 +93,5 @@ public class Balancer implements Runnable, BalancerRMI {
 
     public ServerSocket getServerSocket() {
         return serverSocket;
-    }
-
-    @Override
-    public void serverConnected(ServerRMI serverRMI) throws RemoteException {
-        servers.add(serverRMI);
-    }
-
-    @Override
-    public void setRectFractalImg(int x, int y, int[][] colorBuffer) throws RemoteException {
-        ImageUtils.paintBufferedImage(x, y, colorBuffer, fractalImage);
     }
 }

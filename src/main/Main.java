@@ -9,7 +9,7 @@ import static javax.swing.WindowConstants.EXIT_ON_CLOSE;
 public class Main {
 
     public static void main(String[] args) {
-	// write your code here
+        // write your code here
         JFrame frame = new JFrame();
         frame.setContentPane(new BalcGUI().getMainPanel());
         frame.pack();

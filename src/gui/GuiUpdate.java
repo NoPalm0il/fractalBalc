@@ -8,12 +8,14 @@ package gui;
 import java.awt.*;
 
 /**
- *
  * @author IPT
  */
 public interface GuiUpdate {
     void onStart();
+
     void onStop();
-    void onException(String message,Exception e);
-    void onDisplay(Color color,String message);
+
+    void onException(String message, Exception e);
+
+    void onDisplay(Color color, String message);
 }
