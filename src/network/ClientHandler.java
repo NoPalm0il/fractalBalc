@@ -11,9 +11,6 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.rmi.RemoteException;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 public class ClientHandler implements Runnable {
 
@@ -42,28 +39,25 @@ public class ClientHandler implements Runnable {
             int work = dimX / servers.size();
 
             fractalImg = new BufferedImage(dimX, dimY, BufferedImage.TYPE_INT_RGB);
+            int[][] fractalColors = null;
 
-            // TODO: this is not correct, imagine 50 servers connected... maybe correct?
-            ExecutorService exe = Executors.newFixedThreadPool(servers.size());
             for (ServerRMI server : servers) {
-                exe.execute(() -> {
-                    try {
-                        server.setFractalParams(rawString);
-                        // with the generate it will write to the buffered image
-                        server.generateFractal();
-                    } catch (RemoteException remoteException) {
-                        balcGUI.onException("", remoteException);
-                    }
-                });
+                try {
+                    server.setFractalParams(rawString);
+                    // with the generate it will write to the buffered image
+                    fractalColors = server.generateFractal();
+                } catch (RemoteException remoteException) {
+                    balcGUI.onException("Server not connected, removed from table", remoteException);
+                    servers.remove(server);
+                }
             }
-            exe.shutdown();
-            exe.awaitTermination(1, TimeUnit.HOURS);
-
+            assert fractalColors != null;
+            fractalImg = ImageUtils.colorArrayToImage(fractalColors);
             clientOutputStream.write(ImageUtils.imageToByteArray(fractalImg));
 
             balcGUI.onDisplay(Color.GREEN, "fractal sent to client");
             clientInputStream.close();
-        } catch (IOException | InterruptedException io) {
+        } catch (IOException io) {
             balcGUI.onException("", io);
         } finally {
             balcGUI.onDisplay(Color.YELLOW, "client stopped");

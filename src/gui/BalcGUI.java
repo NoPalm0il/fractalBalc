@@ -1,6 +1,5 @@
 package gui;
 
-import network.shared.BalancerRMI;
 import services.Balancer;
 import services.ServerRemote;
 import utils.GuiUtils;
@@ -9,16 +8,14 @@ import javax.swing.*;
 import java.awt.*;
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.MalformedURLException;
 import java.net.UnknownHostException;
-import java.rmi.Naming;
-import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
-import java.rmi.registry.LocateRegistry;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class BalcGUI {
     private final AtomicBoolean isBalancerRunning;
+    private final BalcGuiUpdate balcGuiUpdate;
+    private final ServerGuiUpdate serverGuiUpdate;
     private JPanel mainPanel;
     private JTextPane logBalTextPane;
     private JTextField listenAddrTextField;
@@ -32,9 +29,6 @@ public class BalcGUI {
     private JButton connectServerButton;
     private JButton disconnectServerButton;
     private Balancer balancer;
-
-    private final BalcGuiUpdate balcGuiUpdate;
-    private final ServerGuiUpdate serverGuiUpdate;
     private ServerRemote serverRemote;
 
     public BalcGUI() {
@@ -66,36 +60,18 @@ public class BalcGUI {
 
         connectServerButton.addActionListener(e -> {
             try {
-                // Connecting to balancer RMI
-                String address = String.format("//%s/%s", addressTextField.getText(), "bal");
-                BalancerRMI stub = (BalancerRMI) Naming.lookup(address);
-
-                // Creating server RMI
-                serverRemote = new ServerRemote(serverGuiUpdate, stub);
-                stub.serverConnected(serverRemote);
-
-                String host = InetAddress.getLocalHost().getHostAddress();
-                LocateRegistry.createRegistry(ServerRemote.SERVER_PORT);
-                String svAddress = String.format("//%s:%d/%s", host, ServerRemote.SERVER_PORT, "server");
-                Naming.rebind(svAddress, serverRemote);
-
-                serverGuiUpdate.onDisplay(Color.GREEN, "Server RMI is running with address " + svAddress);
-            } catch (RemoteException | UnknownHostException | MalformedURLException | NotBoundException remoteException) {
-                serverGuiUpdate.onException("", remoteException);
+                serverRemote = new ServerRemote(serverGuiUpdate, addressTextField.getText());
+                new Thread(serverRemote).start();
+            } catch (RemoteException remoteException) {
+                remoteException.printStackTrace();
             }
         });
 
-        disconnectServerButton.addActionListener(e -> {
-
-        });
+        disconnectServerButton.addActionListener(e -> serverRemote.stopServer());
     }
 
     public JPanel getMainPanel() {
         return mainPanel;
-    }
-
-    public boolean isBalancerRunning() {
-        return isBalancerRunning.get();
     }
 
     public void setBalancerRunning(boolean serverRunning) {
@@ -135,6 +111,7 @@ public class BalcGUI {
 
         @Override
         public void onStart() {
+            onDisplay(Color.GREEN, "Server RMI is running");
             connectServerButton.setEnabled(false);
             disconnectServerButton.setEnabled(true);
         }
@@ -143,6 +120,7 @@ public class BalcGUI {
         public void onStop() {
             disconnectServerButton.setEnabled(false);
             connectServerButton.setEnabled(true);
+            onDisplay(Color.YELLOW, "Server stopped");
         }
 
         @Override

@@ -12,12 +12,12 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.SocketException;
+import java.net.*;
 import java.rmi.Naming;
+import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -28,9 +28,9 @@ public class Balancer implements Runnable {
     private final GuiUpdate balcGUI;
     private final CopyOnWriteArrayList<ServerRMI> servers;
     private final int socketPort;
+    private final AtomicBoolean isServerRunning;
     private ServerSocket serverSocket;
     private BufferedImage fractalImage;
-    private final AtomicBoolean isServerRunning;
     private BalancerRMI stub;
     private ServerHandlerRMI serverHandlerRMI;
 
@@ -47,13 +47,9 @@ public class Balancer implements Runnable {
             serverSocket = new ServerSocket(socketPort);
             balcGUI.onDisplay(Color.GREEN, "Balancer socket listening on port " + serverSocket.getLocalPort());
 
-            serverHandlerRMI = new ServerHandlerRMI(balcGUI, fractalImage, servers);
-            stub = (BalancerRMI) UnicastRemoteObject.exportObject(serverHandlerRMI, BALANCER_PORT);
-            LocateRegistry.createRegistry(BALANCER_PORT);
             String address = String.format("//%s:%d/%s", InetAddress.getLocalHost().getHostAddress(), BALANCER_PORT, "bal");
-            Naming.rebind(address, stub);
+            Registry balancerReg = startBalancerRMI(address);
 
-            balcGUI.onDisplay(Color.GREEN, "BalancerRMI on: " + address);
             while (isServerRunning.get()) {
                 try {
                     Socket socket = serverSocket.accept();
@@ -84,11 +80,24 @@ public class Balancer implements Runnable {
                     balcGUI.onException(io.getMessage(), io);
                 }
             }
-        } catch (IOException e) {
+            balancerReg.unbind(address);
+        } catch (IOException | NotBoundException e) {
             balcGUI.onException(e.getMessage(), e);
         }
 
         balcGUI.onStop();
+    }
+
+    private Registry startBalancerRMI(String address) throws RemoteException, UnknownHostException, MalformedURLException {
+        serverHandlerRMI = new ServerHandlerRMI(balcGUI, fractalImage, servers);
+        stub = (BalancerRMI) UnicastRemoteObject.exportObject(serverHandlerRMI, BALANCER_PORT);
+        Registry balancerReg = LocateRegistry.createRegistry(BALANCER_PORT);
+
+        Naming.rebind(address, stub);
+
+        balcGUI.onDisplay(Color.GREEN, "BalancerRMI on: " + address);
+
+        return balancerReg;
     }
 
     public ServerSocket getServerSocket() {

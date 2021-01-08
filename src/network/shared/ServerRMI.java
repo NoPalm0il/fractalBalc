@@ -6,5 +6,5 @@ import java.rmi.RemoteException;
 public interface ServerRMI extends Remote {
     void setFractalParams(String fractalParams) throws RemoteException;
 
-    void generateFractal() throws RemoteException;
+    int[][] generateFractal() throws RemoteException;
 }
