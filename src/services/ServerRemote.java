@@ -7,6 +7,7 @@ import network.shared.BalancerRMI;
 import network.shared.ServerRMI;
 import utils.ImageUtils;
 
+import javax.swing.*;
 import java.awt.*;
 import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
@@ -17,7 +18,6 @@ import java.rmi.Naming;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -31,7 +31,8 @@ public class ServerRemote extends UnicastRemoteObject implements ServerRMI, Runn
     private final String balAddress;
     private String[] fractalParams;
     private String svAddress;
-    private Registry serverReg;
+    private int[] indexes;
+    private int totalFrames;
 
     public ServerRemote(GuiUpdate serverGui, String balAddress) throws RemoteException {
         super(SERVER_PORT);
@@ -50,7 +51,7 @@ public class ServerRemote extends UnicastRemoteObject implements ServerRMI, Runn
             stub.serverConnected(this);
 
             String host = InetAddress.getLocalHost().getHostAddress();
-            serverReg = LocateRegistry.createRegistry(ServerRemote.SERVER_PORT);
+            LocateRegistry.createRegistry(ServerRemote.SERVER_PORT);
             svAddress = String.format("//%s:%d/%s", host, ServerRemote.SERVER_PORT, "server");
             Naming.rebind(svAddress, this);
 
@@ -62,9 +63,9 @@ public class ServerRemote extends UnicastRemoteObject implements ServerRMI, Runn
 
     public void stopServer() {
         try {
-            serverReg.unbind(svAddress);
+            Naming.unbind(svAddress);
             serverGui.onStop();
-        } catch (RemoteException | NotBoundException e) {
+        } catch (RemoteException | NotBoundException | MalformedURLException e) {
             e.printStackTrace();
             serverGui.onException(e.getLocalizedMessage(), e);
         }
@@ -73,43 +74,64 @@ public class ServerRemote extends UnicastRemoteObject implements ServerRMI, Runn
     @Override
     public void setFractalParams(String fractalParams) throws RemoteException {
         this.fractalParams = fractalParams.split(" ");
-        serverGui.onDisplay(Color.GREEN, "Received params");
+        serverGui.onDisplay(Color.YELLOW, "Received params");
     }
 
     @Override
-    public int[][] generateFractal() throws RemoteException {
+    public int[][][] generateFractal() throws RemoteException {
         try {
+            serverGui.onDisplay(Color.YELLOW,"Calculating fractal...");
             Point2D center = new Point2D.Double(Double.parseDouble(fractalParams[0]), Double.parseDouble(fractalParams[1]));
             double zoom = Double.parseDouble(fractalParams[2]);
             int iterations = Integer.parseInt(fractalParams[3]);
             int dimX = Integer.parseInt(fractalParams[4]);
             int dimY = Integer.parseInt(fractalParams[5]);
-            // int start = Integer.parseInt(fractalParams[6]);
             int start = 0;
-            // int end = Integer.parseInt(fractalParams[7]);
-            int end = dimX;
 
-            BufferedImage bufferedImage = new BufferedImage(end - start, dimY, BufferedImage.TYPE_INT_RGB);
+            BufferedImage bufferedImage = new BufferedImage(dimX - start, dimY, BufferedImage.TYPE_INT_RGB);
 
             AtomicInteger ticket = new AtomicInteger(start);
             // e criada uma thread pool com "nCores" threads
             int nCores = Runtime.getRuntime().availableProcessors();
-            ExecutorService exe = Executors.newFixedThreadPool(nCores);
+            int inserted = 0;
+            int[][][] framesColors = new int[indexes.length][dimY][dimX];
+            for(int j = 0; j < totalFrames; j++){
+                zoom *= 0.85;
+                ticket.set(0);
+                if(j == indexes[j]) {
+                    ExecutorService exe = Executors.newFixedThreadPool(nCores);
 
-            for (int i = 0; i < nCores; i++) {
-                exe.execute(new FractalPixels(center, zoom, iterations, dimX, dimY, bufferedImage, new Mandelbrot(), ticket));
+                    for (int i = 0; i < nCores; i++) {
+                        exe.execute(new FractalPixels(center, zoom, iterations, dimX, dimY, dimX, bufferedImage, new Mandelbrot(), ticket));
+                    }
+                    // obriga o ExecutorService a nao aceitar mais tasks novas e espera que as threads acabem o processo para poder terminar
+                    exe.shutdown();
+                    exe.awaitTermination(1, TimeUnit.HOURS);
+                    framesColors[inserted++] = ImageUtils.imageToColorArray(bufferedImage);
+
+                    if(j / (totalFrames * 1.0) >= 0.49 && j / (totalFrames * 1.0) <= 0.51)
+                        serverGui.onDisplay(Color.YELLOW, "50%");
+                }
             }
-            // obriga o ExecutorService a nao aceitar mais tasks novas e espera que as threads acabem o processo para poder terminar
-            exe.shutdown();
-            exe.awaitTermination(1, TimeUnit.HOURS);
 
             //balStub.setRectFractalImg(0, start, ImageUtils.imageToColorArray(bufferedImage));
-            serverGui.onDisplay(Color.GREEN, "Image sent");
+            serverGui.onDisplay(Color.GREEN, "Frames sent");
 
-            return ImageUtils.imageToColorArray(bufferedImage);
+            return framesColors;
         } catch (Exception e) {
-            serverGui.onException("Error sending fractal: ", e);
-            return new int[0][];
+            serverGui.onException("Error sending frames: ", e);
+            e.printStackTrace();
+            return new int[0][][];
         }
+    }
+
+    @Override
+    public void setIndexes(int[] indexes) throws RemoteException {
+        this.indexes = indexes;
+    }
+
+    @Override
+    public void setTotalFrames(int totalFrames) throws RemoteException {
+        this.totalFrames = totalFrames;
     }
 }

@@ -12,7 +12,7 @@ import java.net.UnknownHostException;
 import java.rmi.RemoteException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class BalcGUI {
+public class MainGUI {
     private final AtomicBoolean isBalancerRunning;
     private final BalcGuiUpdate balcGuiUpdate;
     private final ServerGuiUpdate serverGuiUpdate;
@@ -31,7 +31,7 @@ public class BalcGUI {
     private Balancer balancer;
     private ServerRemote serverRemote;
 
-    public BalcGUI() {
+    public MainGUI() {
         isBalancerRunning = new AtomicBoolean(false);
         try {
             addressTextField.setText(InetAddress.getLocalHost().getHostAddress() + ":10011");
@@ -55,7 +55,6 @@ public class BalcGUI {
             } catch (IOException ioException) {
                 ioException.printStackTrace();
             }
-            logBalTextPane.setText("");
         });
 
         connectServerButton.addActionListener(e -> {
@@ -107,7 +106,7 @@ public class BalcGUI {
         }
     }
 
-    public class ServerGuiUpdate implements GuiUpdate {
+    class ServerGuiUpdate implements GuiUpdate {
 
         @Override
         public void onStart() {

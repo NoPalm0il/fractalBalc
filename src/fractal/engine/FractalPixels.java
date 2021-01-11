@@ -22,35 +22,21 @@ public class FractalPixels extends Thread {
     protected final boolean isBigDecimal;
     protected final float hueShift, saturationShift, brightnessShift;
     protected final int zoomSizeDecCount;
-
-    BufferedImage imgBuffer;
-    Fractal fractal;
-    AtomicInteger ticket;
+    private final int end;
+    private final BufferedImage imgBuffer;
+    private final Fractal fractal;
+    private final AtomicInteger ticket;
 
     // construtor da classe
-    public FractalPixels(Point2D center, Object zoomSize, int iteration, int sizeX, int sizeY, BufferedImage imgBuffer, Fractal fractal, AtomicInteger ticket, float[] getSliderHSB, boolean isBigDecimal, int zoomSizeDecCount) {
-        this.isBigDecimal = isBigDecimal;
-        this.center = center;
-        this.zoomSize = zoomSize;
-        this.iteration = iteration;
-        this.sizeX = sizeX;
-        this.sizeY = sizeY;
-        this.imgBuffer = imgBuffer;
-        this.fractal = fractal;
-        this.ticket = ticket;
-        this.hueShift = getSliderHSB[0];
-        this.saturationShift = getSliderHSB[1];
-        this.brightnessShift = getSliderHSB[2];
-        this.zoomSizeDecCount = Math.max(zoomSizeDecCount, 15);
-    }
 
-    public FractalPixels(Point2D center, double zoomSize, int iteration, int sizeX, int sizeY, BufferedImage imgBuffer, Fractal fractal, AtomicInteger ticket) {
+    public FractalPixels(Point2D center, double zoomSize, int iteration, int sizeX, int sizeY, int end, BufferedImage imgBuffer, Fractal fractal, AtomicInteger ticket) {
         this.isBigDecimal = false;
         this.center = center;
         this.zoomSize = zoomSize;
         this.iteration = iteration;
         this.sizeX = sizeX;
         this.sizeY = sizeY;
+        this.end = end;
         this.imgBuffer = imgBuffer;
         this.fractal = fractal;
         this.ticket = ticket;
@@ -88,7 +74,7 @@ public class FractalPixels extends Thread {
         }
         // caso o processo seja feito com valores double:
         else {
-            for (int x = ticket.get(); x < sizeX; x = ticket.getAndIncrement()) {
+            for (int x = ticket.get(); x < end; x = ticket.getAndIncrement()) {
                 for (int y = 0; y < sizeY; y++) {
                     // convert pixel cords to real world
                     double x0 = center.getX() - (double) zoomSize / 2 + (double) zoomSize * x / sizeY;
