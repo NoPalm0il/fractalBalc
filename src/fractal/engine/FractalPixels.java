@@ -17,19 +17,19 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class FractalPixels extends Thread {
     protected final Point2D center;
     protected final Object zoomSize;
-    protected final int iteration;
+    protected int iteration;
     protected final int sizeX, sizeY;
     protected final boolean isBigDecimal;
     protected final float hueShift, saturationShift, brightnessShift;
     protected final int zoomSizeDecCount;
     private final int end;
-    private final BufferedImage imgBuffer;
+    private final BufferedImage bufferedFratal;
     private final Fractal fractal;
     private final AtomicInteger ticket;
 
     // construtor da classe
 
-    public FractalPixels(Point2D center, double zoomSize, int iteration, int sizeX, int sizeY, int end, BufferedImage imgBuffer, Fractal fractal, AtomicInteger ticket) {
+    public FractalPixels(Point2D center, double zoomSize, int iteration, int sizeX, int sizeY, int end, BufferedImage bufferedFractal, Fractal fractal, AtomicInteger ticket) {
         this.isBigDecimal = false;
         this.center = center;
         this.zoomSize = zoomSize;
@@ -37,7 +37,7 @@ public class FractalPixels extends Thread {
         this.sizeX = sizeX;
         this.sizeY = sizeY;
         this.end = end;
-        this.imgBuffer = imgBuffer;
+        this.bufferedFratal = bufferedFractal;
         this.fractal = fractal;
         this.ticket = ticket;
         this.hueShift = 1;
@@ -68,7 +68,7 @@ public class FractalPixels extends Thread {
                     // get color
                     float color = fractal.color(x0, y0, iteration, zoomSizeDecCount) / (float) iteration;
                     // paint pixel
-                    imgBuffer.setRGB(x, sizeY - 1 - y, Color.HSBtoRGB(hueShift - color, saturationShift, brightnessShift + color));
+                    //fractalColor.setRGB(x, sizeY - 1 - y, Color.HSBtoRGB(hueShift - color, saturationShift, brightnessShift + color));
                 }
             }
         }
@@ -82,7 +82,9 @@ public class FractalPixels extends Thread {
                     // get color
                     float color = fractal.color(x0, y0, iteration) / (float) iteration;
                     // paint pixel
-                    imgBuffer.setRGB(x, sizeY - 1 - y, Color.HSBtoRGB(hueShift - color, saturationShift, brightnessShift + color));
+                    // int cl = Color.HSBtoRGB(hueShift - color, saturationShift, brightnessShift + color);
+                    // fractalColor[sizeY - 1 - y][x] = 0xff000000 | cl;
+                    bufferedFratal.setRGB(x, sizeY - 1 - y, Color.HSBtoRGB(hueShift - color, saturationShift, brightnessShift + color));
                 }
             }
         }

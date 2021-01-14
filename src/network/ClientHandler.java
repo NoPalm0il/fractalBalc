@@ -2,14 +2,11 @@ package network;
 
 import gui.GuiUpdate;
 import network.shared.ServerRMI;
-import utils.ImageUtils;
 
-import javax.swing.*;
 import java.awt.*;
-import java.awt.image.BufferedImage;
 import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
@@ -20,11 +17,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ClientHandler implements Runnable {
 
     private final DataInputStream clientInputStream;
-    private final DataOutputStream clientOutputStream;
+    private final ObjectOutputStream clientOutputStream;
     private final ArrayList<ServerRMI> servers;
     private final GuiUpdate balcGUI;
 
-    public ClientHandler(DataInputStream clientInputStream, DataOutputStream clientOutputStream, ArrayList<ServerRMI> servers, GuiUpdate balcGUI) {
+    public ClientHandler(DataInputStream clientInputStream, ObjectOutputStream clientOutputStream, ArrayList<ServerRMI> servers, GuiUpdate balcGUI) {
         this.clientInputStream = clientInputStream;
         this.clientOutputStream = clientOutputStream;
         this.servers = servers;
@@ -41,18 +38,18 @@ public class ClientHandler implements Runnable {
             int dimY = Integer.parseInt(fractalParams[5]);
             int totalFrames = Integer.parseInt(fractalParams[6]);
 
-            int[][][][] fractalFrameColors = new int[servers.size()][totalFrames][dimY][dimX];
+            byte[][][] fractalFrameColors = new byte[servers.size()][totalFrames][1024 * 1024];
 
             int totalServers = servers.size();
             int serverFrames = totalFrames / totalServers;
             int[][] framesPerServer;
 
-            if(totalServers % totalFrames != 0)
+            if (totalFrames % totalServers != 0)
                 framesPerServer = new int[totalServers][serverFrames + 1];
             else
                 framesPerServer = new int[totalServers][serverFrames];
 
-            if(totalServers != 1) {
+            if (totalServers != 1) {
                 int restFrames = 0;
                 for (int k = 0; k < totalServers; k++) {
                     for (int j = 0; j < totalFrames; j++) {
@@ -62,7 +59,8 @@ public class ClientHandler implements Runnable {
                     restFrames = 0;
                 }
             } else
-                for (int i = 0; i < serverFrames; i++) framesPerServer[0][i] = i;
+                for (int i = 0; i < serverFrames; i++)
+                    framesPerServer[0][i] = i;
             ExecutorService exe = Executors.newFixedThreadPool(servers.size());
 
             int i = 0;
@@ -83,8 +81,21 @@ public class ClientHandler implements Runnable {
             });
             exe.shutdown();
             exe.awaitTermination(5, TimeUnit.HOURS);
-            // fractalImg = ImageUtils.colorArrayToImage(fractalColors);
-            sendFractal(fractalFrameColors);
+
+            balcGUI.onDisplay(Color.GREEN, "received frames from servers, sending to client...");
+
+            indexer.set(0);
+            exe = Executors.newFixedThreadPool(servers.size());
+            exe.execute(() -> {
+                try {
+                    sendFractal(fractalFrameColors[indexer.getAndIncrement()]);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    balcGUI.onException("", e);
+                }
+            });
+            exe.shutdown();
+            exe.awaitTermination(5, TimeUnit.HOURS);
 
             balcGUI.onDisplay(Color.GREEN, "fractal sent to client");
             clientInputStream.close();
@@ -93,26 +104,14 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    private void sendFractal(int[][][][] fractalFrameColors) throws IOException, InterruptedException {
-        Frame jf = new JFrame("shit");
-        JLabel lb = new JLabel();
-        jf.add(lb);
-        jf.setVisible(true);
-
-
-        // foreach server
-        for (int[][][] fractalFrameColor : fractalFrameColors) {
-            BufferedImage fractalImg = null;
-            // foreach frame
-            for (int j = 0; j < fractalFrameColors[0].length - 1; j++) {
-                fractalImg = ImageUtils.colorArrayToImage(fractalFrameColor[j]);
-                lb.setIcon(new ImageIcon(fractalImg));
-                jf.pack();
-                // todo: acaba isto palhaço
-                Thread.sleep(100);
-            }
-            clientOutputStream.write(ImageUtils.imageToByteArray(fractalImg));
-            clientOutputStream.flush();
-        }
+    /**
+     * sends the fractal images to the client
+     * @param fractalFrames - servers, frames, image bytes
+     * @throws IOException          - socket error
+     * @throws InterruptedException - sleep
+     */
+    private void sendFractal(byte[][] fractalFrames) throws IOException {
+        clientOutputStream.writeObject(fractalFrames);
+        clientOutputStream.flush();
     }
 }

@@ -7,7 +7,6 @@ import network.shared.BalancerRMI;
 import network.shared.ServerRMI;
 import utils.ImageUtils;
 
-import javax.swing.*;
 import java.awt.*;
 import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
@@ -78,7 +77,7 @@ public class ServerRemote extends UnicastRemoteObject implements ServerRMI, Runn
     }
 
     @Override
-    public int[][][] generateFractal() throws RemoteException {
+    public byte[][] generateFractal() throws RemoteException {
         try {
             serverGui.onDisplay(Color.YELLOW,"Calculating fractal...");
             Point2D center = new Point2D.Double(Double.parseDouble(fractalParams[0]), Double.parseDouble(fractalParams[1]));
@@ -88,40 +87,49 @@ public class ServerRemote extends UnicastRemoteObject implements ServerRMI, Runn
             int dimY = Integer.parseInt(fractalParams[5]);
             int start = 0;
 
-            BufferedImage bufferedImage = new BufferedImage(dimX - start, dimY, BufferedImage.TYPE_INT_RGB);
-
             AtomicInteger ticket = new AtomicInteger(start);
             // e criada uma thread pool com "nCores" threads
             int nCores = Runtime.getRuntime().availableProcessors();
             int inserted = 0;
-            int[][][] framesColors = new int[indexes.length][dimY][dimX];
+            // index frames
+            byte[][] framesBytes = new byte[indexes.length][1024 * 1024];
+            int quarter = totalFrames / 4, half = quarter * 2, thirdQuarter = quarter * 3;
+
+            // foreach frame
             for(int j = 0; j < totalFrames; j++){
                 zoom *= 0.85;
                 ticket.set(0);
                 if(j == indexes[j]) {
                     ExecutorService exe = Executors.newFixedThreadPool(nCores);
 
+                    BufferedImage fractalColor = new BufferedImage(dimX, dimY, BufferedImage.TYPE_INT_RGB);
+
                     for (int i = 0; i < nCores; i++) {
-                        exe.execute(new FractalPixels(center, zoom, iterations, dimX, dimY, dimX, bufferedImage, new Mandelbrot(), ticket));
+                        exe.execute(new FractalPixels(center, zoom, iterations, dimX, dimY, dimX, fractalColor, new Mandelbrot(), ticket));
                     }
+                    iterations += 20;
                     // obriga o ExecutorService a nao aceitar mais tasks novas e espera que as threads acabem o processo para poder terminar
                     exe.shutdown();
                     exe.awaitTermination(1, TimeUnit.HOURS);
-                    framesColors[inserted++] = ImageUtils.imageToColorArray(bufferedImage);
+                    framesBytes[inserted++] = ImageUtils.imageToByteArray(fractalColor);
 
-                    if(j / (totalFrames * 1.0) >= 0.49 && j / (totalFrames * 1.0) <= 0.51)
+                    if(j == quarter)
+                        serverGui.onDisplay(Color.YELLOW, "25%");
+                    else if(j == half)
                         serverGui.onDisplay(Color.YELLOW, "50%");
+                    else if(j == thirdQuarter)
+                        serverGui.onDisplay(Color.YELLOW, "75%");
                 }
             }
 
-            //balStub.setRectFractalImg(0, start, ImageUtils.imageToColorArray(bufferedImage));
+            //balStub.setRectFractalImg(0, start, ImageUtils.imageToColorArray(fractalColor));
             serverGui.onDisplay(Color.GREEN, "Frames sent");
 
-            return framesColors;
+            return framesBytes;
         } catch (Exception e) {
             serverGui.onException("Error sending frames: ", e);
             e.printStackTrace();
-            return new int[0][][];
+            return new byte[0][];
         }
     }
 

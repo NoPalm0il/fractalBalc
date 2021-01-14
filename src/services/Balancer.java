@@ -7,16 +7,12 @@ import network.shared.BalancerRMI;
 import network.shared.ServerRMI;
 
 import java.awt.*;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.EOFException;
-import java.io.IOException;
+import java.io.*;
 import java.net.*;
 import java.rmi.Naming;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -52,7 +48,7 @@ public class Balancer implements Runnable {
                 try {
                     Socket socket = serverSocket.accept();
                     DataInputStream dis = new DataInputStream(socket.getInputStream());
-                    DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+                    ObjectOutputStream dos = new ObjectOutputStream(socket.getOutputStream());
 
                     balcGUI.onDisplay(Color.GREEN, "connection form " + socket.getInetAddress() + ":" + socket.getPort());
 
