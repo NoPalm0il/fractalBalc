@@ -18,6 +18,8 @@ import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -94,13 +96,15 @@ public class ServerRemote extends UnicastRemoteObject implements ServerRMI, Runn
             // index frames
             byte[][] framesBytes = new byte[indexes.length][1024 * 1024];
             int quarter = totalFrames / 4, half = quarter * 2, thirdQuarter = quarter * 3;
+            ArrayList<Integer> frames = new ArrayList<>();
+
+            for(int index : indexes)
+                frames.add(index);
 
             // foreach frame
-            for (int index : indexes) {
-                zoom *= 0.85;
-                ticket.set(0);
                 for (int i = 0; i < totalFrames; i++) {
-                    if (i == index) {
+                    if (frames.contains(i)) {
+                        ticket.set(0);
                         ExecutorService exe = Executors.newFixedThreadPool(nCores);
 
                         BufferedImage fractalImage = new BufferedImage(dimX, dimY, BufferedImage.TYPE_INT_RGB);
@@ -108,7 +112,6 @@ public class ServerRemote extends UnicastRemoteObject implements ServerRMI, Runn
                         for (int k = 0; k < nCores; k++) {
                             exe.execute(new FractalPixels(center, zoom, iterations, dimX, dimY, dimX, fractalImage, new Mandelbrot(), ticket));
                         }
-                        iterations += 20;
                         // obriga o ExecutorService a nao aceitar mais tasks novas e espera que as threads acabem o processo para poder terminar
                         exe.shutdown();
                         exe.awaitTermination(1, TimeUnit.HOURS);
@@ -120,12 +123,10 @@ public class ServerRemote extends UnicastRemoteObject implements ServerRMI, Runn
                             serverGui.onDisplay(Color.YELLOW, "50%");
                         else if (i == thirdQuarter)
                             serverGui.onDisplay(Color.YELLOW, "75%");
-                        break;
                     }
+                    iterations += 20;
+                    zoom *= 0.85;
                 }
-            }
-
-            //balStub.setRectFractalImg(0, start, ImageUtils.imageToColorArray(fractalColor));
             serverGui.onDisplay(Color.GREEN, "Frames sent");
 
             return framesBytes;

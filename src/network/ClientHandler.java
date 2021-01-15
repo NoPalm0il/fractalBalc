@@ -66,12 +66,17 @@ public class ClientHandler implements Runnable {
                         framesPerServer[j][i] = i;
 
             ExecutorService exe = Executors.newFixedThreadPool(servers.size());
+            HashMap<ServerRMI, int[]> framesPerServerMap = new HashMap<>();
 
             int i = 0;
             for (ServerRMI server : servers) {
                 server.setFractalParams(rawString);
                 server.setIndexes(framesPerServer[i]);
                 server.setTotalFrames(totalFrames);
+                for (int j = 0; j < framesPerServer[i].length; j++) {
+                    framesPerServerMap.put(server, framesPerServer[i]);
+                }
+                i++;
             }
             AtomicInteger indexer = new AtomicInteger();
             exe.execute(() -> {
@@ -89,16 +94,13 @@ public class ClientHandler implements Runnable {
             balcGUI.onDisplay(Color.GREEN, "received frames from servers, sending to client...");
 
             byte[][] toSend = new byte[totalFrames][1024 * 1024];
+            int inserted = 0;
 
             for (int j = 0; j < servers.size(); j++) {
-                for (int k = 0; k < serverFrames; k++) {
-                    for (int l = 0; l < totalFrames; l++) {
-                        if (framesPerServer[j][k] == l) {
-                            toSend[l] = fractalFrameImages[j][k];
-                            break;
-                        }
-                    }
+                for (int frameIndex : framesPerServerMap.get(servers.get(j))) {
+                    toSend[frameIndex] = fractalFrameImages[j][inserted++];
                 }
+                inserted = 0;
             }
             // todo: isto tá fdd, com 2 pcs n envia todas as frames ou elas ficam fddas
             sendFractal(toSend);
