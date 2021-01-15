@@ -16,18 +16,17 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class ClientHandler implements Runnable {
 
+    public static final int FRAME_OFFSET = 1024 * 512;
     private final DataInputStream clientInputStream;
     private final ObjectOutputStream clientOutputStream;
     private final ArrayList<ServerRMI> servers;
     private final GuiUpdate balcGUI;
-    public static final int FRAME_OFFSET = 1024 * 512;
 
     /**
-     *
-     * @param clientInputStream takes the client input stream
+     * @param clientInputStream  takes the client input stream
      * @param clientOutputStream takes the client object output stream
-     * @param servers servers connected to the balancer
-     * @param balcGUI gui class to log information
+     * @param servers            servers connected to the balancer
+     * @param balcGUI            gui class to log information
      */
     public ClientHandler(DataInputStream clientInputStream, ObjectOutputStream clientOutputStream, ArrayList<ServerRMI> servers, GuiUpdate balcGUI) {
         this.clientInputStream = clientInputStream;
@@ -62,15 +61,15 @@ public class ClientHandler implements Runnable {
                 server.setTotalFrames(totalFrames);
             }
             AtomicInteger indexer = new AtomicInteger();
-            exe.execute(() -> {
-                for (ServerRMI server : servers) {
+            for (ServerRMI server : servers) {
+                exe.execute(() -> {
                     try {
                         fractalFrameImages[indexer.getAndIncrement()] = server.generateFractal();
                     } catch (RemoteException re) {
                         balcGUI.onException("", re);
                     }
-                }
-            });
+                });
+            }
             exe.shutdown();
             exe.awaitTermination(1, TimeUnit.HOURS);
 
@@ -139,6 +138,7 @@ public class ClientHandler implements Runnable {
                 servers.remove(server);
             }
         }
+        balcGUI.onDisplay(Color.YELLOW, "servers connected: " + servers.size());
         return servers.size();
     }
 }

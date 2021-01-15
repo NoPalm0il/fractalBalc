@@ -34,6 +34,12 @@ public class ServerRemote extends UnicastRemoteObject implements ServerRMI, Runn
     private int[] indexes;
     private int totalFrames;
 
+    /**
+     * @param serverGui  class to log information
+     * @param balAddress balancer address
+     * @throws RemoteException super constructor
+     * @see UnicastRemoteObject
+     */
     public ServerRemote(GuiUpdate serverGui, String balAddress) throws RemoteException {
         super(SERVER_PORT);
         this.serverGui = serverGui;
@@ -79,7 +85,7 @@ public class ServerRemote extends UnicastRemoteObject implements ServerRMI, Runn
     @Override
     public byte[][] generateFractal() throws RemoteException {
         try {
-            serverGui.onDisplay(Color.YELLOW, "Calculating fractal...");
+            serverGui.onDisplay(Color.YELLOW, "Calculating...");
             Point2D center = new Point2D.Double(Double.parseDouble(fractalParams[0]), Double.parseDouble(fractalParams[1]));
             double zoom = Double.parseDouble(fractalParams[2]);
             int iterations = Integer.parseInt(fractalParams[3]);
@@ -93,7 +99,7 @@ public class ServerRemote extends UnicastRemoteObject implements ServerRMI, Runn
             int inserted = 0;
             // index frames
             byte[][] framesBytes = new byte[indexes.length][1024 * 1024];
-            int quarter = totalFrames / 4, half = quarter * 2, thirdQuarter = quarter * 3;
+            int quarter = totalFrames / 4, half = totalFrames / 2, thirdQuarter = (totalFrames * 3) / 4;
             ArrayList<Integer> frames = new ArrayList<>();
 
             for (int index : indexes)
@@ -115,11 +121,11 @@ public class ServerRemote extends UnicastRemoteObject implements ServerRMI, Runn
                     exe.awaitTermination(1, TimeUnit.HOURS);
                     framesBytes[inserted++] = ImageUtils.imageToByteArray(fractalImage);
 
-                    if (i == quarter)
+                    if (inserted == quarter)
                         serverGui.onDisplay(Color.YELLOW, "25%");
-                    else if (i == half)
+                    else if (inserted == half)
                         serverGui.onDisplay(Color.YELLOW, "50%");
-                    else if (i == thirdQuarter)
+                    else if (inserted == thirdQuarter)
                         serverGui.onDisplay(Color.YELLOW, "75%");
                 }
                 iterations += 20;
@@ -138,11 +144,13 @@ public class ServerRemote extends UnicastRemoteObject implements ServerRMI, Runn
     @Override
     public void setIndexes(int[] indexes) throws RemoteException {
         this.indexes = indexes;
+        serverGui.onDisplay(Color.YELLOW, "frames to render: " + indexes.length);
     }
 
     @Override
     public void setTotalFrames(int totalFrames) throws RemoteException {
         this.totalFrames = totalFrames;
+        serverGui.onDisplay(Color.YELLOW, "total frames: " + totalFrames);
     }
 
     @Override

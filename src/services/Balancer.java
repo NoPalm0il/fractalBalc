@@ -83,6 +83,15 @@ public class Balancer implements Runnable {
         balcGUI.onStop();
     }
 
+    /**
+     * method to start RMI
+     *
+     * @param stub    is the interface object, be carefully with the garbage collector
+     * @param address balancer RMI address
+     * @throws RemoteException
+     * @throws UnknownHostException
+     * @throws MalformedURLException
+     */
     private void startBalancerRMI(BalancerRMI stub, String address) throws RemoteException, UnknownHostException, MalformedURLException {
         serverHandlerRMI = new ServerHandlerRMI(balcGUI, servers);
         stub = (BalancerRMI) UnicastRemoteObject.exportObject(serverHandlerRMI, BALANCER_PORT);
