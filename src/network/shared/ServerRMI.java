@@ -11,4 +11,6 @@ public interface ServerRMI extends Remote {
     void setIndexes(int[] indexes) throws RemoteException;
 
     void setTotalFrames(int totalFrames) throws RemoteException;
+
+    void isAlive() throws RemoteException;
 }

@@ -52,8 +52,10 @@ public class MainGUI {
             setBalancerRunning(false);
             try {
                 balancer.getServerSocket().close();
+                balancer = null;
             } catch (IOException ioException) {
                 ioException.printStackTrace();
+                balcGuiUpdate.onException("", ioException);
             }
         });
 
@@ -63,10 +65,15 @@ public class MainGUI {
                 new Thread(serverRemote).start();
             } catch (RemoteException remoteException) {
                 remoteException.printStackTrace();
+                serverGuiUpdate.onException("", remoteException);
             }
         });
 
-        disconnectServerButton.addActionListener(e -> serverRemote.stopServer());
+        disconnectServerButton.addActionListener(e -> {
+            serverRemote.stopServer();
+            serverRemote = null;
+            serverGuiUpdate.onStop();
+        });
     }
 
     public JPanel getMainPanel() {
@@ -107,17 +114,18 @@ public class MainGUI {
     }
 
     class ServerGuiUpdate implements GuiUpdate {
-
         @Override
         public void onStart() {
             onDisplay(Color.GREEN, "Server RMI is running");
             connectServerButton.setEnabled(false);
+            addressTextField.setEnabled(false);
             disconnectServerButton.setEnabled(true);
         }
 
         @Override
         public void onStop() {
             disconnectServerButton.setEnabled(false);
+            addressTextField.setEnabled(true);
             connectServerButton.setEnabled(true);
             onDisplay(Color.YELLOW, "Server stopped");
         }
