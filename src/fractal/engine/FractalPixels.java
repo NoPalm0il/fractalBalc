@@ -17,7 +17,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class FractalPixels extends Thread {
     protected final Point2D center;
     protected final Object zoomSize;
-    protected int iteration;
     protected final int sizeX, sizeY;
     protected final boolean isBigDecimal;
     protected final float hueShift, saturationShift, brightnessShift;
@@ -26,6 +25,7 @@ public class FractalPixels extends Thread {
     private final BufferedImage bufferedFratal;
     private final Fractal fractal;
     private final AtomicInteger ticket;
+    protected int iteration;
 
     // construtor da classe
 

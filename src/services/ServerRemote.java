@@ -96,29 +96,32 @@ public class ServerRemote extends UnicastRemoteObject implements ServerRMI, Runn
             int quarter = totalFrames / 4, half = quarter * 2, thirdQuarter = quarter * 3;
 
             // foreach frame
-            for(int j = 0; j < totalFrames; j++){
+            for (int index : indexes) {
                 zoom *= 0.85;
                 ticket.set(0);
-                if(j == indexes[j]) {
-                    ExecutorService exe = Executors.newFixedThreadPool(nCores);
+                for (int i = 0; i < totalFrames; i++) {
+                    if (i == index) {
+                        ExecutorService exe = Executors.newFixedThreadPool(nCores);
 
-                    BufferedImage fractalColor = new BufferedImage(dimX, dimY, BufferedImage.TYPE_INT_RGB);
+                        BufferedImage fractalImage = new BufferedImage(dimX, dimY, BufferedImage.TYPE_INT_RGB);
 
-                    for (int i = 0; i < nCores; i++) {
-                        exe.execute(new FractalPixels(center, zoom, iterations, dimX, dimY, dimX, fractalColor, new Mandelbrot(), ticket));
+                        for (int k = 0; k < nCores; k++) {
+                            exe.execute(new FractalPixels(center, zoom, iterations, dimX, dimY, dimX, fractalImage, new Mandelbrot(), ticket));
+                        }
+                        iterations += 20;
+                        // obriga o ExecutorService a nao aceitar mais tasks novas e espera que as threads acabem o processo para poder terminar
+                        exe.shutdown();
+                        exe.awaitTermination(1, TimeUnit.HOURS);
+                        framesBytes[inserted++] = ImageUtils.imageToByteArray(fractalImage);
+
+                        if (i == quarter)
+                            serverGui.onDisplay(Color.YELLOW, "25%");
+                        else if (i == half)
+                            serverGui.onDisplay(Color.YELLOW, "50%");
+                        else if (i == thirdQuarter)
+                            serverGui.onDisplay(Color.YELLOW, "75%");
+                        break;
                     }
-                    iterations += 20;
-                    // obriga o ExecutorService a nao aceitar mais tasks novas e espera que as threads acabem o processo para poder terminar
-                    exe.shutdown();
-                    exe.awaitTermination(1, TimeUnit.HOURS);
-                    framesBytes[inserted++] = ImageUtils.imageToByteArray(fractalColor);
-
-                    if(j == quarter)
-                        serverGui.onDisplay(Color.YELLOW, "25%");
-                    else if(j == half)
-                        serverGui.onDisplay(Color.YELLOW, "50%");
-                    else if(j == thirdQuarter)
-                        serverGui.onDisplay(Color.YELLOW, "75%");
                 }
             }
 

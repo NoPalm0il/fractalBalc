@@ -2,13 +2,17 @@ package network;
 
 import gui.GuiUpdate;
 import network.shared.ServerRMI;
+import services.ServerRemote;
 
 import java.awt.*;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
 import java.rmi.RemoteException;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -34,11 +38,9 @@ public class ClientHandler implements Runnable {
             String rawString = clientInputStream.readUTF();
 
             String[] fractalParams = rawString.split(" ");
-            int dimX = Integer.parseInt(fractalParams[4]);
-            int dimY = Integer.parseInt(fractalParams[5]);
             int totalFrames = Integer.parseInt(fractalParams[6]);
 
-            byte[][][] fractalFrameColors = new byte[servers.size()][totalFrames][1024 * 1024];
+            byte[][][] fractalFrameImages = new byte[servers.size()][totalFrames][1024 * 1024];
 
             int totalServers = servers.size();
             int serverFrames = totalFrames / totalServers;
@@ -59,44 +61,47 @@ public class ClientHandler implements Runnable {
                     restFrames = 0;
                 }
             } else
-                for (int i = 0; i < serverFrames; i++)
-                    framesPerServer[0][i] = i;
+                for (int j = 0; j < servers.size(); j++)
+                    for (int i = 0; i < serverFrames; i++)
+                        framesPerServer[j][i] = i;
+
             ExecutorService exe = Executors.newFixedThreadPool(servers.size());
 
             int i = 0;
             for (ServerRMI server : servers) {
                 server.setFractalParams(rawString);
-                server.setIndexes(framesPerServer[i++]);
+                server.setIndexes(framesPerServer[i]);
                 server.setTotalFrames(totalFrames);
             }
             AtomicInteger indexer = new AtomicInteger();
             exe.execute(() -> {
                 for (ServerRMI server : servers) {
                     try {
-                        fractalFrameColors[indexer.getAndIncrement()] = server.generateFractal();
+                        fractalFrameImages[indexer.getAndIncrement()] = server.generateFractal();
                     } catch (RemoteException re) {
                         balcGUI.onException("", re);
                     }
                 }
             });
             exe.shutdown();
-            exe.awaitTermination(5, TimeUnit.HOURS);
+            exe.awaitTermination(1, TimeUnit.HOURS);
 
             balcGUI.onDisplay(Color.GREEN, "received frames from servers, sending to client...");
 
-            indexer.set(0);
-            exe = Executors.newFixedThreadPool(servers.size());
-            exe.execute(() -> {
-                try {
-                    sendFractal(fractalFrameColors[indexer.getAndIncrement()]);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    balcGUI.onException("", e);
-                }
-            });
-            exe.shutdown();
-            exe.awaitTermination(5, TimeUnit.HOURS);
+            byte[][] toSend = new byte[totalFrames][1024 * 1024];
 
+            for (int j = 0; j < servers.size(); j++) {
+                for (int k = 0; k < serverFrames; k++) {
+                    for (int l = 0; l < totalFrames; l++) {
+                        if (framesPerServer[j][k] == l) {
+                            toSend[l] = fractalFrameImages[j][k];
+                            break;
+                        }
+                    }
+                }
+            }
+            // todo: isto tá fdd, com 2 pcs n envia todas as frames ou elas ficam fddas
+            sendFractal(toSend);
             balcGUI.onDisplay(Color.GREEN, "fractal sent to client");
             clientInputStream.close();
         } catch (IOException | InterruptedException io) {
@@ -106,9 +111,8 @@ public class ClientHandler implements Runnable {
 
     /**
      * sends the fractal images to the client
-     * @param fractalFrames - servers, frames, image bytes
-     * @throws IOException          - socket error
-     * @throws InterruptedException - sleep
+     * @param fractalFrames frames, image bytes
+     * @throws IOException  socket error
      */
     private void sendFractal(byte[][] fractalFrames) throws IOException {
         clientOutputStream.writeObject(fractalFrames);
