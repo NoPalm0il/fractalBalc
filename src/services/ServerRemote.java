@@ -5,11 +5,13 @@ import fractal.models.Mandelbrot;
 import gui.GuiUpdate;
 import network.shared.BalancerRMI;
 import network.shared.ServerRMI;
-import utils.ImageUtils;
 
+import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.UnknownHostException;
@@ -24,6 +26,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * Esta é a classe dos serviços do servidor, cria o RMI
+ * recebe os parametros do fratal e calcula-o, e devolve numa matriz de bytes
+ */
 public class ServerRemote extends UnicastRemoteObject implements ServerRMI, Runnable {
 
     public static int SERVER_PORT = 13337;
@@ -35,9 +41,9 @@ public class ServerRemote extends UnicastRemoteObject implements ServerRMI, Runn
     private int totalFrames;
 
     /**
-     * @param serverGui  class to log information
+     * @param serverGui  recebe os metodos para atualizar o log e output de informacao
      * @param balAddress balancer address
-     * @throws RemoteException super constructor
+     * @throws RemoteException by the super constructor
      * @see UnicastRemoteObject
      */
     public ServerRemote(GuiUpdate serverGui, String balAddress) throws RemoteException {
@@ -46,6 +52,9 @@ public class ServerRemote extends UnicastRemoteObject implements ServerRMI, Runn
         this.balAddress = balAddress;
     }
 
+    /**
+     * Conecta-se ao RMI do balanceador e inicia o servico RMI do servidor
+     */
     @Override
     public void run() {
         try {
@@ -67,6 +76,10 @@ public class ServerRemote extends UnicastRemoteObject implements ServerRMI, Runn
         }
     }
 
+    /**
+     * Unbind do registo
+     * @see Naming
+     */
     public void stopServer() {
         try {
             Naming.unbind(svAddress);
@@ -76,12 +89,22 @@ public class ServerRemote extends UnicastRemoteObject implements ServerRMI, Runn
         }
     }
 
+    /**
+     * Recebe a string e separa cada propriedade pelo espaco.
+     * @param fractalParams ponto, zoom, iterations, dim x and y, frames, tipo fratal
+     * @throws RemoteException
+     */
     @Override
     public void setFractalParams(String fractalParams) throws RemoteException {
         this.fractalParams = fractalParams.split(" ");
         serverGui.onDisplay(Color.YELLOW, "Received params");
     }
 
+    /**
+     * Gera o fratal e devolve as frames e os bytes de cada frame
+     * @return byte[frame][byte]
+     * @throws RemoteException
+     */
     @Override
     public byte[][] generateFractal() throws RemoteException {
         try {
@@ -99,7 +122,7 @@ public class ServerRemote extends UnicastRemoteObject implements ServerRMI, Runn
             int inserted = 0;
             // index frames
             byte[][] framesBytes = new byte[indexes.length][1024 * 1024];
-            int quarter = totalFrames / 4, half = totalFrames / 2, thirdQuarter = (totalFrames * 3) / 4;
+            int quarter = indexes.length / 4, half = indexes.length / 2, thirdQuarter = (indexes.length * 3) / 4;
             ArrayList<Integer> frames = new ArrayList<>();
 
             for (int index : indexes)
@@ -119,7 +142,7 @@ public class ServerRemote extends UnicastRemoteObject implements ServerRMI, Runn
                     // obriga o ExecutorService a nao aceitar mais tasks novas e espera que as threads acabem o processo para poder terminar
                     exe.shutdown();
                     exe.awaitTermination(1, TimeUnit.HOURS);
-                    framesBytes[inserted++] = ImageUtils.imageToByteArray(fractalImage);
+                    framesBytes[inserted++] = imageToByteArray(fractalImage);
 
                     if (inserted == quarter)
                         serverGui.onDisplay(Color.YELLOW, "25%");
@@ -141,19 +164,45 @@ public class ServerRemote extends UnicastRemoteObject implements ServerRMI, Runn
         }
     }
 
+    /**
+     * Define os indexes deste servidor.
+     * @param indexes array de indexes para calcular
+     * @throws RemoteException
+     */
     @Override
     public void setIndexes(int[] indexes) throws RemoteException {
         this.indexes = indexes;
         serverGui.onDisplay(Color.YELLOW, "frames to render: " + indexes.length);
     }
 
+    /**
+     * Define a quantidade de frames totais.
+     * @param totalFrames todas as frames que o cliente pediu
+     * @throws RemoteException
+     */
     @Override
     public void setTotalFrames(int totalFrames) throws RemoteException {
         this.totalFrames = totalFrames;
         serverGui.onDisplay(Color.YELLOW, "total frames: " + totalFrames);
     }
 
+    /**
+     * Verifica apenas se está ativo.
+     * @throws RemoteException
+     */
     @Override
     public void isAlive() throws RemoteException {
+    }
+
+    /**
+     * Traduz a imagem para bytes
+     * @param image recebe a imagem para ser posta em bytes
+     * @return image bytes
+     */
+    private byte[] imageToByteArray(BufferedImage image) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ImageIO.write(image, "jpg", baos);
+        baos.flush();
+        return baos.toByteArray();
     }
 }

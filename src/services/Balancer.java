@@ -20,6 +20,12 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * Classe que contem os serviços do balanceador.
+ *
+ * <p>Comunica com os servidores atraves de RMI e com o cliente
+ * atraves de uma socket.
+ */
 public class Balancer implements Runnable {
 
     public static final int BALANCER_PORT = 10011;
@@ -27,9 +33,15 @@ public class Balancer implements Runnable {
     private final ArrayList<ServerRMI> servers;
     private final int socketPort;
     private final AtomicBoolean isServerRunning;
-    private ServerSocket serverSocket;
+    private ServerSocket balancerSocket;
     private ServerHandlerRMI serverHandlerRMI;
 
+    /**
+     * Construtor do balanceador, apenas inicializa os atributos
+     * @param balcGUI class para inserir a informacao (log)
+     * @param socketPort porta para que seja criada a {@link ServerSocket}
+     * @param isRunning determina se está ou nao a aceitar conexoes do Cliente
+     */
     public Balancer(GuiUpdate balcGUI, int socketPort, AtomicBoolean isRunning) {
         this.balcGUI = balcGUI;
         this.socketPort = socketPort;
@@ -40,8 +52,8 @@ public class Balancer implements Runnable {
     @Override
     public void run() {
         try {
-            serverSocket = new ServerSocket(socketPort);
-            balcGUI.onDisplay(Color.GREEN, "Balancer socket listening on port " + serverSocket.getLocalPort());
+            balancerSocket = new ServerSocket(socketPort);
+            balcGUI.onDisplay(Color.GREEN, "Balancer socket listening on port " + balancerSocket.getLocalPort());
 
             String address = String.format("//%s:%d/%s", InetAddress.getLocalHost().getHostAddress(), BALANCER_PORT, "bal");
             BalancerRMI stub = null;
@@ -49,7 +61,7 @@ public class Balancer implements Runnable {
 
             while (isServerRunning.get()) {
                 try {
-                    Socket socket = serverSocket.accept();
+                    Socket socket = balancerSocket.accept();
                     DataInputStream dis = new DataInputStream(socket.getInputStream());
                     ObjectOutputStream dos = new ObjectOutputStream(socket.getOutputStream());
 
@@ -84,13 +96,10 @@ public class Balancer implements Runnable {
     }
 
     /**
-     * method to start RMI
-     *
-     * @param stub    is the interface object, be carefully with the garbage collector
+     * Comeca o RMI do balanceador {@link BalancerRMI}, exporta a interface desta classe.
+     * @param stub é o objeto a ser exportado da interface, é necessário ter a atencao
+     * para que o garbage collector não limpe o objeto
      * @param address balancer RMI address
-     * @throws RemoteException
-     * @throws UnknownHostException
-     * @throws MalformedURLException
      */
     private void startBalancerRMI(BalancerRMI stub, String address) throws RemoteException, UnknownHostException, MalformedURLException {
         serverHandlerRMI = new ServerHandlerRMI(balcGUI, servers);
@@ -102,7 +111,7 @@ public class Balancer implements Runnable {
         balcGUI.onDisplay(Color.GREEN, "BalancerRMI on: " + address);
     }
 
-    public ServerSocket getServerSocket() {
-        return serverSocket;
+    public ServerSocket getBalancerSocket() {
+        return balancerSocket;
     }
 }

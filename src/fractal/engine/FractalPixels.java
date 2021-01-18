@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Esta classe serve apenas para gerar os pixeis e preencher a BufferedImage
  * <p>
- * Verifica se a boolean isBigDecimal está ativa, em caso afirmativo realiza os calculos em BigDecimal
+ * Verifica se a boolean isBigDecimal está true, assim realiza os calculos em BigDecimal
  */
 public class FractalPixels extends Thread {
     protected final Point2D center;
@@ -68,7 +68,7 @@ public class FractalPixels extends Thread {
                     // get color
                     float color = fractal.color(x0, y0, iteration, zoomSizeDecCount) / (float) iteration;
                     // paint pixel
-                    //fractalColor.setRGB(x, sizeY - 1 - y, Color.HSBtoRGB(hueShift - color, saturationShift, brightnessShift + color));
+                    bufferedFratal.setRGB(x, sizeY - 1 - y, Color.HSBtoRGB(hueShift - color, saturationShift, brightnessShift + color));
                 }
             }
         }
@@ -82,8 +82,6 @@ public class FractalPixels extends Thread {
                     // get color
                     float color = fractal.color(x0, y0, iteration) / (float) iteration;
                     // paint pixel
-                    // int cl = Color.HSBtoRGB(hueShift - color, saturationShift, brightnessShift + color);
-                    // fractalColor[sizeY - 1 - y][x] = 0xff000000 | cl;
                     bufferedFratal.setRGB(x, sizeY - 1 - y, Color.HSBtoRGB(hueShift - color, saturationShift, brightnessShift + color));
                 }
             }

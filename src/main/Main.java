@@ -6,10 +6,13 @@ import javax.swing.*;
 
 import static javax.swing.WindowConstants.EXIT_ON_CLOSE;
 
+/**
+ * @author Tiago Murteira   n21087
+ * @author Joao Ramos       n21397
+ */
 public class Main {
-
     public static void main(String[] args) {
-        // write your code here
+        // Inicia o GUI
         JFrame frame = new JFrame();
         frame.setContentPane(new MainGUI().getMainPanel());
         frame.pack();

@@ -14,6 +14,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * Classe que trata da conexao do cliente, nesta classe quando o cliente se
+ * conecta é feito o pedido dos fratais aos servidores.
+ */
 public class ClientHandler implements Runnable {
 
     public static final int FRAME_OFFSET = 1024 * 512;
@@ -43,16 +47,13 @@ public class ClientHandler implements Runnable {
             String[] fractalParams = rawString.split(" ");
             int totalFrames = Integer.parseInt(fractalParams[6]);
 
-            // buffer that contains all frames
+            // buffer que irá conter as frames de cada servidor
             byte[][][] fractalFrameImages = new byte[servers.size()][totalFrames][FRAME_OFFSET];
 
             int totalServers = servers.size();
-
+            // frames atribuidas a cada servidor para este calcular
             int[][] framesPerServer = assignServerFrameIndexes(totalFrames, totalServers);
-
             totalServers = checkServers();
-
-            ExecutorService exe = Executors.newFixedThreadPool(servers.size());
 
             int i = 0;
             for (ServerRMI server : servers) {
@@ -60,6 +61,8 @@ public class ClientHandler implements Runnable {
                 server.setIndexes(framesPerServer[i++]);
                 server.setTotalFrames(totalFrames);
             }
+            // pede a todos os servidores as frames
+            ExecutorService exe = Executors.newFixedThreadPool(totalServers);
             AtomicInteger indexer = new AtomicInteger();
             for (ServerRMI server : servers) {
                 exe.execute(() -> {
@@ -73,11 +76,12 @@ public class ClientHandler implements Runnable {
             exe.shutdown();
             exe.awaitTermination(1, TimeUnit.HOURS);
 
-            balcGUI.onDisplay(Color.GREEN, "received frames from servers, sending to client...");
-
+            balcGUI.onDisplay(Color.YELLOW, "received frames from servers, sending to client...");
+            // buffer que irá contem as frames organizadas e enviar para o cliente
             byte[][] toSend = new byte[totalFrames][FRAME_OFFSET];
             int inserted = 0;
 
+            // organizacao das imagens
             for (int j = 0; j < totalServers; j++) {
                 for (int frameIndex : framesPerServer[j]) {
                     toSend[frameIndex] = fractalFrameImages[j][inserted++];
@@ -93,9 +97,9 @@ public class ClientHandler implements Runnable {
     }
 
     /**
-     * sends the fractal images to the client
+     * Envia para o cliente as frames/imagens ({@link java.awt.image.BufferedImage}).
      *
-     * @param fractalFrames frames containing the fractal image bytes
+     * @param fractalFrames cada frame e os bytes desta
      * @throws IOException socket error
      */
     private void sendFractal(byte[][] fractalFrames) throws IOException {
@@ -103,11 +107,22 @@ public class ClientHandler implements Runnable {
         clientOutputStream.flush();
     }
 
+    /**
+     * Define as frames com intervalos iguais de acordo com a quantidade
+     * de servidores ({@link ServerRMI}) conectados ao balanceador.
+     *
+     * <p>Uma forma para que haja uma carga de trabalho mais equilibrada.
+     *
+     * @param totalFrames quantidade de frames que o cliente pediu
+     * @param totalServers quantidade de servidores conectados ao balanceador
+     * @return matriz que contem os indexes de cada servidor
+     */
     private int[][] assignServerFrameIndexes(int totalFrames, int totalServers) {
         int[][] framesPerServer;
         int serverFrames = totalFrames / totalServers;
 
         if (totalFrames % totalServers != 0)
+            // caso seja impar é adicionada uma frame a mais como margem de erro
             framesPerServer = new int[totalServers][serverFrames + 1];
         else
             framesPerServer = new int[totalServers][serverFrames];
@@ -129,6 +144,11 @@ public class ClientHandler implements Runnable {
         return framesPerServer;
     }
 
+    /**
+     * Verifica os servidores conectados, caso um servidor não esteja
+     * é gerada a exceção {@link RemoteException} e este é removido.
+     * @return quantidade de servidores conectado ao balanceador
+     */
     private int checkServers() {
         for (ServerRMI server : servers) {
             try {

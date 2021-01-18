@@ -12,6 +12,9 @@ import java.net.UnknownHostException;
 import java.rmi.RemoteException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * Classe GUI do Balanceador ({@link Balancer}) e Servidor ({@link network.ServerHandlerRMI}).
+ */
 public class MainGUI {
     private final AtomicBoolean isBalancerRunning;
     private final BalcGuiUpdate balcGuiUpdate;
@@ -42,16 +45,18 @@ public class MainGUI {
         balcGuiUpdate = new BalcGuiUpdate();
         serverGuiUpdate = new ServerGuiUpdate();
 
+        // start Balancer button
         startBalButton.addActionListener(e -> {
             balcGuiUpdate.onStart();
             balancer = new Balancer(balcGuiUpdate, Integer.parseInt(listenAddrTextField.getText()), isBalancerRunning);
             new Thread(balancer).start();
         });
 
+        // stop Balancer button
         stopBalButton.addActionListener(e -> {
             setBalancerRunning(false);
             try {
-                balancer.getServerSocket().close();
+                balancer.getBalancerSocket().close();
                 balancer = null;
             } catch (IOException ioException) {
                 ioException.printStackTrace();
@@ -59,6 +64,7 @@ public class MainGUI {
             }
         });
 
+        // connect server button
         connectServerButton.addActionListener(e -> {
             try {
                 serverRemote = new ServerRemote(serverGuiUpdate, addressTextField.getText());
@@ -69,6 +75,7 @@ public class MainGUI {
             }
         });
 
+        // disconnect server button
         disconnectServerButton.addActionListener(e -> {
             serverRemote.stopServer();
             serverRemote = null;
@@ -84,6 +91,9 @@ public class MainGUI {
         isBalancerRunning.set(serverRunning);
     }
 
+    /**
+     * Classe anónima para os serviços do {@link Balancer}.
+     */
     class BalcGuiUpdate implements GuiUpdate {
         @Override
         public void onStart() {
@@ -113,6 +123,9 @@ public class MainGUI {
         }
     }
 
+    /**
+     * Classe anónima para os serviços do {@link ServerRemote}.
+     */
     class ServerGuiUpdate implements GuiUpdate {
         @Override
         public void onStart() {
