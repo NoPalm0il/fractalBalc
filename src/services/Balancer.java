@@ -76,7 +76,8 @@ public class Balancer implements Runnable {
                         td.start();
                         td.join();
                     }
-
+                    dos.flush();
+                    socket.close();
                 } catch (SocketException se) {
                     balcGUI.onDisplay(Color.RED, "ServerSocket stopped accepting");
                 } catch (EOFException eo) {

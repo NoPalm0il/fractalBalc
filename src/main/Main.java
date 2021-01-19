@@ -13,7 +13,7 @@ import static javax.swing.WindowConstants.EXIT_ON_CLOSE;
 public class Main {
     public static void main(String[] args) {
         // Inicia o GUI
-        JFrame frame = new JFrame();
+        JFrame frame = new JFrame("Fractal Balancer & Server");
         frame.setContentPane(new MainGUI().getMainPanel());
         frame.pack();
         frame.setBounds(180, 40, 1200, 680);

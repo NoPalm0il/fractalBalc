@@ -32,12 +32,6 @@ public interface ServerRMI extends Remote {
     void setIndexes(int[] indexes) throws RemoteException;
 
     /**
-     * define as frames totais
-     * @param totalFrames todas as frames que o cliente pediu
-     * @throws RemoteException necessário para o RMI
-     */
-    void setTotalFrames(int totalFrames) throws RemoteException;
-    /**
      * método para verificar se o servidor está ativo
      * @throws RemoteException necessário para o RMI
      */

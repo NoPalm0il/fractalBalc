@@ -1,6 +1,10 @@
 package services;
 
+import fractal.Fractal;
 import fractal.engine.FractalPixels;
+import fractal.models.BurningShip;
+import fractal.models.Julia;
+import fractal.models.Julia2;
 import fractal.models.Mandelbrot;
 import gui.GuiUpdate;
 import network.shared.BalancerRMI;
@@ -114,9 +118,25 @@ public class ServerRemote extends UnicastRemoteObject implements ServerRMI, Runn
             int iterations = Integer.parseInt(fractalParams[3]);
             int dimX = Integer.parseInt(fractalParams[4]);
             int dimY = Integer.parseInt(fractalParams[5]);
-            int start = 0;
+            totalFrames = Integer.parseInt(fractalParams[6]);
+            serverGui.onDisplay(Color.YELLOW, "total frames: " + totalFrames);
+            String frChoice = fractalParams[7];
+            Fractal fractalToRender;
+            switch (frChoice) {
+                case "b":
+                    fractalToRender = new BurningShip();
+                    break;
+                case "j1":
+                    fractalToRender = new Julia();
+                    break;
+                case "j2":
+                    fractalToRender = new Julia2();
+                    break;
+                default:
+                    fractalToRender = new Mandelbrot();
+            }
 
-            AtomicInteger ticket = new AtomicInteger(start);
+            AtomicInteger ticket = new AtomicInteger();
             // e criada uma thread pool com "nCores" threads
             int nCores = Runtime.getRuntime().availableProcessors();
             int inserted = 0;
@@ -137,7 +157,7 @@ public class ServerRemote extends UnicastRemoteObject implements ServerRMI, Runn
                     BufferedImage fractalImage = new BufferedImage(dimX, dimY, BufferedImage.TYPE_INT_RGB);
 
                     for (int k = 0; k < nCores; k++) {
-                        exe.execute(new FractalPixels(center, zoom, iterations, dimX, dimY, dimX, fractalImage, new Mandelbrot(), ticket));
+                        exe.execute(new FractalPixels(center, zoom, iterations, dimX, dimY, dimX, fractalImage, fractalToRender, ticket));
                     }
                     // obriga o ExecutorService a nao aceitar mais tasks novas e espera que as threads acabem o processo para poder terminar
                     exe.shutdown();
@@ -152,7 +172,7 @@ public class ServerRemote extends UnicastRemoteObject implements ServerRMI, Runn
                         serverGui.onDisplay(Color.YELLOW, "75%");
                 }
                 iterations += 20;
-                zoom *= 0.85;
+                zoom *= 0.88;
             }
             serverGui.onDisplay(Color.GREEN, "Frames sent");
 
@@ -173,17 +193,6 @@ public class ServerRemote extends UnicastRemoteObject implements ServerRMI, Runn
     public void setIndexes(int[] indexes) throws RemoteException {
         this.indexes = indexes;
         serverGui.onDisplay(Color.YELLOW, "frames to render: " + indexes.length);
-    }
-
-    /**
-     * Define a quantidade de frames totais.
-     * @param totalFrames todas as frames que o cliente pediu
-     * @throws RemoteException
-     */
-    @Override
-    public void setTotalFrames(int totalFrames) throws RemoteException {
-        this.totalFrames = totalFrames;
-        serverGui.onDisplay(Color.YELLOW, "total frames: " + totalFrames);
     }
 
     /**

@@ -59,7 +59,6 @@ public class ClientHandler implements Runnable {
             for (ServerRMI server : servers) {
                 server.setFractalParams(rawString);
                 server.setIndexes(framesPerServer[i++]);
-                server.setTotalFrames(totalFrames);
             }
             // pede a todos os servidores as frames
             ExecutorService exe = Executors.newFixedThreadPool(totalServers);
@@ -91,6 +90,7 @@ public class ClientHandler implements Runnable {
             sendFractal(toSend);
             balcGUI.onDisplay(Color.GREEN, "fractal sent to client");
             clientInputStream.close();
+            clientOutputStream.close();
         } catch (IOException | InterruptedException io) {
             balcGUI.onException("", io);
         }
