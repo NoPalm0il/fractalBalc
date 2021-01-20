@@ -66,14 +66,16 @@ public class ServerRemote extends UnicastRemoteObject implements ServerRMI, Runn
             String address = String.format("//%s/%s", balAddress, "bal");
             BalancerRMI stub = (BalancerRMI) Naming.lookup(address);
 
-            // Creating server RMI
+            // Sends this class to balancer
             stub.serverConnected(this);
 
             String host = InetAddress.getLocalHost().getHostAddress();
+            // create server RMI
             LocateRegistry.createRegistry(ServerRemote.SERVER_PORT);
             svAddress = String.format("//%s:%d/%s", host, ServerRemote.SERVER_PORT, "server");
             Naming.rebind(svAddress, this);
 
+            // update GUI, logs info
             serverGui.onStart();
         } catch (RemoteException | UnknownHostException | MalformedURLException | NotBoundException remoteException) {
             serverGui.onException("", remoteException);
@@ -141,7 +143,7 @@ public class ServerRemote extends UnicastRemoteObject implements ServerRMI, Runn
             int nCores = Runtime.getRuntime().availableProcessors();
             int inserted = 0;
             // index frames
-            byte[][] framesBytes = new byte[indexes.length][1024 * 1024];
+            byte[][] framesBytes = new byte[indexes.length][1024 * 512];
             int quarter = indexes.length / 4, half = indexes.length / 2, thirdQuarter = (indexes.length * 3) / 4;
             ArrayList<Integer> frames = new ArrayList<>();
 

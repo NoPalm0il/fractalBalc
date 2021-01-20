@@ -50,10 +50,10 @@ public class ClientHandler implements Runnable {
             // buffer que irá conter as frames de cada servidor
             byte[][][] fractalFrameImages = new byte[servers.size()][totalFrames][FRAME_OFFSET];
 
-            int totalServers = servers.size();
-            // frames atribuidas a cada servidor para este calcular
-            int[][] framesPerServer = assignServerFrameIndexes(totalFrames, totalServers);
+            int totalServers;
             totalServers = checkServers();
+           // frames atribuidas a cada servidor para este calcular
+            int[][] framesPerServer = assignServerFrameIndexes(totalFrames, totalServers);
 
             int i = 0;
             for (ServerRMI server : servers) {
